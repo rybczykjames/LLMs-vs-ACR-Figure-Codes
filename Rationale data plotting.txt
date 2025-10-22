@@ -1,0 +1,76 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+df = pd.read_csv('finalLLM.csv')
+
+rationale_df = df[df['metric'] == 'rationale'].copy()
+
+llm_order = ['o3', 'opus_4', 'gemini_2.5_pro', 'o4-mini', 'sonnet_4', 'gemini_2.5_flash', 'openevidence']
+
+score_counts = rationale_df.pivot_table(
+    index='llm', 
+    columns='score', 
+    values='vignette_id', 
+    aggfunc='count',
+    fill_value=0
+)
+
+score_percentages = (score_counts / 50) * 100
+
+for score in [0, 1, 2]:
+    if score not in score_percentages.columns:
+        score_percentages[score] = 0
+
+score_percentages = score_percentages.reindex(llm_order)
+
+fig, ax = plt.subplots(figsize=(12, 8))
+
+colors = ['#084594', '#2171b5', '#6baed6']
+
+bar_width = 0.6
+x_positions = np.arange(len(llm_order))
+
+bottom = np.zeros(len(llm_order))
+bars = []
+
+for score, color in zip([0, 1, 2], colors):
+    if score in score_percentages.columns:
+        values = score_percentages[score].values
+        bar = ax.bar(x_positions, values, bar_width, 
+                     bottom=bottom, 
+                     color=color, 
+                     edgecolor='black', 
+                     linewidth=0.5)
+        bars.append(bar)
+        bottom += values
+
+ax.set_xlabel('LLM Model', fontsize=12, fontweight='bold')
+ax.set_ylabel('Percentage of Responses (%)', fontsize=12, fontweight='bold')
+ax.set_title('LLM Rationale Score', fontsize=14, fontweight='bold')
+
+formatted_labels = ['O3', 'Opus 4', 'Gemini 2.5 Pro', 'O4-mini', 'Sonnet 4', 'Gemini 2.5 Flash', 'OpenEvidence']
+
+ax.set_xticks(x_positions)
+ax.set_xticklabels(formatted_labels, rotation=45, ha='right')
+
+ax.set_ylim(0, 100)
+ax.set_yticks(range(0, 101, 10))
+ax.set_yticklabels([f'{i}%' for i in range(0, 101, 10)])
+
+ax.grid(axis='y', alpha=0.3, linestyle='--')
+ax.set_axisbelow(True)
+
+legend_labels = ['Score 0', 'Score 1', 'Score 2']
+ax.legend(bars, legend_labels, 
+          title='Rationale Rating', 
+          loc='center left', 
+          bbox_to_anchor=(1, 0.5),
+          frameon=True,
+          fancybox=True,
+          shadow=True)
+
+plt.tight_layout()
+plt.subplots_adjust(right=0.85)
+
+plt.show()

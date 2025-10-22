@@ -1,0 +1,103 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import stats
+
+df = pd.read_csv('llm_scores 1.csv')
+
+readability_df = df[df['metric'] == 'readability'].copy()
+
+print(f"Found {len(readability_df)} readability scores across all LLMs")
+
+llm_names = ['o3', 'opus_4', 'gemini_2.5_pro', 'o4-mini', 
+             'sonnet_4', 'gemini_2.5_flash', 'openevidence']
+
+means = []
+ci_lower = []
+ci_upper = []
+std_errors = []
+sample_sizes = []
+
+for llm in llm_names:
+    llm_data = readability_df[readability_df['llm'] == llm]['score']
+    
+    if len(llm_data) > 0:
+        values = llm_data.dropna()
+        mean = values.mean()
+        means.append(mean)
+        
+        n = len(values)
+        sample_sizes.append(n)
+        std = values.std(ddof=1)
+        se = std / np.sqrt(n)
+        std_errors.append(se)
+        
+        confidence = 0.95
+        t_value = stats.t.ppf((1 + confidence) / 2, n - 1)
+        margin_error = t_value * se
+        
+        ci_lower.append(mean - margin_error)
+        ci_upper.append(mean + margin_error)
+    else:
+        print(f"Warning: No readability data found for {llm}")
+        means.append(0)
+        ci_lower.append(0)
+        ci_upper.append(0)
+        std_errors.append(0)
+        sample_sizes.append(0)
+
+if len(means) == 0 or all(m == 0 for m in means):
+    print("Error: No readability data found for any LLM")
+    exit()
+
+errors = np.array(means) - np.array(ci_lower)
+
+fig, ax = plt.subplots(figsize=(12, 8))
+
+x_positions = np.arange(len(llm_names))
+bar_width = 0.6
+
+bar_colors = ['#084594', '#2171b5', '#4292c6', '#6baed6', 
+              '#9ecae1', '#c6dbef', '#deebf7']
+
+bars = ax.bar(x_positions, means, bar_width,
+              yerr=errors,
+              capsize=5,
+              color=bar_colors,
+              edgecolor='black',
+              linewidth=1,
+              error_kw={'linewidth': 1.5, 'ecolor': 'black'})
+
+ax.set_xlabel('LLM Model', fontsize=12, fontweight='bold')
+ax.set_ylabel('Average Readability Score', fontsize=12, fontweight='bold')
+ax.set_title('LLM Readability Complexity Scores with 95% Confidence Intervals', fontsize=14, fontweight='bold')
+
+formatted_labels = ['O3', 'Opus 4', 'Gemini 2.5 Pro', 'O4-mini', 
+                   'Sonnet 4', 'Gemini 2.5 Flash', 'OpenEvidence']
+ax.set_xticks(x_positions)
+ax.set_xticklabels(formatted_labels, rotation=45, ha='right')
+
+if max(ci_upper) > 0:
+    ax.set_ylim(0, max(ci_upper) * 1.3)  
+
+ax.grid(axis='y', alpha=0.3, linestyle='--')
+ax.set_axisbelow(True)
+
+for i, bar in enumerate(bars):
+    if means[i] > 0:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., 
+                height + errors[i] + 0.3, 
+                f'{means[i]:.2f}',
+                ha='center', va='bottom', 
+                fontsize=10, fontweight='bold')
+
+textstr = 'Error bars: 95% CI (Higher = more complex)'
+props = dict(boxstyle='round', facecolor='white', 
+             alpha=0.8, edgecolor='gray')
+ax.text(0.02, 0.98, textstr, transform=ax.transAxes, 
+        fontsize=10, verticalalignment='top', bbox=props)
+
+plt.tight_layout()
+
+plt.show()
