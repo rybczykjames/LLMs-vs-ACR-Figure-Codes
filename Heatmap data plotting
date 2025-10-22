@@ -1,0 +1,112 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import seaborn as sns
+import numpy as np
+
+data = {
+    'Performance Metric': [
+        'Appropriateness', 'Appropriateness', 'Appropriateness', 'Appropriateness', 'Appropriateness', 'Appropriateness', 'Appropriateness',
+        'Specificity', 'Specificity', 'Specificity', 'Specificity', 'Specificity', 'Specificity', 'Specificity',
+        'Rationale', 'Rationale', 'Rationale', 'Rationale', 'Rationale', 'Rationale', 'Rationale',
+        'Citation Strength', 'Citation Strength', 'Citation Strength', 'Citation Strength', 'Citation Strength', 'Citation Strength', 'Citation Strength'
+    ],
+    'LLM': [
+        'o3', 'Opus 4', 'Gemini 2.5 Pro', 'OpenEvidence', 'Sonnet 4', 'Gemini 2.5 Flash', 'o4-mini',
+        'o3', 'Opus 4', 'Gemini 2.5 Pro', 'OpenEvidence', 'Sonnet 4', 'Gemini 2.5 Flash', 'o4-mini',
+        'o3', 'Opus 4', 'Gemini 2.5 Pro', 'OpenEvidence', 'Sonnet 4', 'Gemini 2.5 Flash', 'o4-mini',
+        'o3', 'Opus 4', 'Gemini 2.5 Pro', 'OpenEvidence', 'Sonnet 4', 'Gemini 2.5 Flash', 'o4-mini'
+    ],
+    'Mean Value': [
+        1.94, 1.80, 1.68, 1.64, 1.72, 1.58, 1.70,  # Appropriateness
+        2.00, 1.79, 2.00, 1.98, 1.93, 1.84, 2.00,  # Specificity
+        1.88, 1.96, 1.74, 1.64, 1.64, 1.92, 1.88,  # Rationale
+        2.00, 1.18, 0.46, 1.96, 1.80, 0.22, 1.90   # Citation Strength
+    ]
+}
+
+df = pd.DataFrame(data)
+
+print("Data loaded successfully!")
+print(f"Shape of data: {df.shape}")
+print(f"Unique LLMs: {df['LLM'].nunique()}")
+print(f"Unique Metrics: {df['Performance Metric'].nunique()}")
+
+heatmap_data = df.pivot(index='LLM', columns='Performance Metric', values='Mean Value')
+
+column_order = ['Appropriateness', 'Specificity', 'Rationale', 'Citation Strength']
+heatmap_data = heatmap_data[column_order]
+
+llm_order = [
+    'o3',                  
+    'Opus 4',             
+    'Gemini 2.5 Pro',     
+    'o4-mini',            
+    'Sonnet 4',           
+    'Gemini 2.5 Flash',   
+    'OpenEvidence'        
+]
+heatmap_data = heatmap_data.reindex(llm_order)
+
+fig, ax = plt.subplots(figsize=(11, 8))
+
+sns.heatmap(heatmap_data, 
+            annot=True,           
+            fmt='.2f',            
+            cmap='mako',          
+            cbar_kws={'label': 'Mean Value', 'shrink': 0.8},
+            linewidths=0.5,       
+            linecolor='white',    
+            square=False,         
+            vmin=0,               
+            vmax=2.0,             
+            ax=ax)
+
+plt.title('Likert Scale LLM Comparison', fontsize=18, fontweight='bold', pad=20)
+plt.xlabel('Performance Metrics', fontsize=12, fontweight='bold')
+plt.ylabel('Language Models', fontsize=12, fontweight='bold')
+
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+
+ax_pos = ax.get_position()
+
+bracket_x = -0.35  # Position to the left of the heatmap
+reasoning_y_start = 6.5
+reasoning_y_end = 2.5
+reasoning_y_mid = (reasoning_y_start + reasoning_y_end) / 2
+
+ax.annotate('', xy=(bracket_x, reasoning_y_start), xytext=(bracket_x, reasoning_y_end),
+            xycoords='data', textcoords='data',
+            arrowprops=dict(arrowstyle='-', lw=1.5, color='black'))
+ax.annotate('', xy=(bracket_x, reasoning_y_start), xytext=(bracket_x-0.05, reasoning_y_start),
+            xycoords='data', textcoords='data',
+            arrowprops=dict(arrowstyle='-', lw=1.5, color='black'))
+ax.annotate('', xy=(bracket_x, reasoning_y_end), xytext=(bracket_x-0.05, reasoning_y_end),
+            xycoords='data', textcoords='data',
+            arrowprops=dict(arrowstyle='-', lw=1.5, color='black'))
+ax.text(bracket_x-0.15, reasoning_y_mid, 'Reasoning\nModels', 
+        rotation=90, ha='center', va='center', fontsize=10, fontweight='bold')
+
+nonreasoning_y_start = 2.4
+nonreasoning_y_end = -0.5
+nonreasoning_y_mid = (nonreasoning_y_start + nonreasoning_y_end) / 2
+
+ax.annotate('', xy=(bracket_x, nonreasoning_y_start), xytext=(bracket_x, nonreasoning_y_end),
+            xycoords='data', textcoords='data',
+            arrowprops=dict(arrowstyle='-', lw=1.5, color='black'))
+ax.annotate('', xy=(bracket_x, nonreasoning_y_start), xytext=(bracket_x-0.05, nonreasoning_y_start),
+            xycoords='data', textcoords='data',
+            arrowprops=dict(arrowstyle='-', lw=1.5, color='black'))
+ax.annotate('', xy=(bracket_x, nonreasoning_y_end), xytext=(bracket_x-0.05, nonreasoning_y_end),
+            xycoords='data', textcoords='data',
+            arrowprops=dict(arrowstyle='-', lw=1.5, color='black'))
+ax.text(bracket_x-0.15, nonreasoning_y_mid, 'Non-Reasoning\nModels', 
+        rotation=90, ha='center', va='center', fontsize=10, fontweight='bold')
+
+ax.axhline(y=3, color='gray', linestyle='--', linewidth=1, alpha=0.5)
+
+plt.tight_layout()
+plt.subplots_adjust(left=0.15)  # Make room for the brackets
+
+plt.show()
